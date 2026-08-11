@@ -1,0 +1,39 @@
+app:
+  name: NexaFlow API
+  env: development
+
+server:
+  host: 0.0.0.0
+  port: 8080
+  read_timeout: 10s
+  write_timeout: 15s
+  idle_timeout: 60s
+  shutdown_timeout: 10s
+
+database:
+  host: localhost
+  port: 5432
+  user: nexaflow
+  password: nexaflow_dev
+  name: nexaflow
+  sslmode: disable
+  max_open_connections: 25
+  max_idle_connections: 5
+  connection_max_lifetime: 30m
+
+redis:
+  host: localhost
+  port: 6379
+  password: ""
+  database: 0
+  dial_timeout: 5s
+  read_timeout: 3s
+  write_timeout: 3s
+
+cors:
+  allowed_origins:
+    - http://localhost:3000
+
+log:
+  level: debug
+  format: console

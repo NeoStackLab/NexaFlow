@@ -1,0 +1,22 @@
+# Local configuration and secrets
+.env
+.env.local
+*.local.yaml
+
+# Build output
+backend/bin/
+frontend/.next/
+frontend/out/
+coverage/
+
+# Dependencies
+frontend/node_modules/
+
+# Editors and operating systems
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
