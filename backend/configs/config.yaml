@@ -2,6 +2,16 @@ app:
   name: NexaFlow API
   env: development
 
+install:
+  data_dir: ./data
+  mode: docker
+
+auth:
+  jwt_secret: change-this-development-secret-now
+  access_token_ttl: 15m
+  refresh_token_ttl: 168h
+  issuer: nexaflow
+
 server:
   host: 0.0.0.0
   port: 8080
@@ -37,3 +47,27 @@ cors:
 log:
   level: debug
   format: console
+
+ai:
+  base_url: https://api.openai.com/v1
+  api_key: ""
+  chat_model: gpt-5-mini
+  embedding_model: text-embedding-3-small
+  timeout: 60s
+
+billing:
+  stripe_secret_key: ""
+  stripe_webhook_secret: ""
+  stripe_pro_price_id: ""
+  stripe_enterprise_price_id: ""
+  success_url: http://localhost:3000/admin/billing?checkout=success
+  cancel_url: http://localhost:3000/admin/billing?checkout=cancel
+
+storage:
+  provider: local
+  local_path: ./data/uploads
+  endpoint: ""
+  region: auto
+  bucket: ""
+  access_key_id: ""
+  secret_access_key: ""

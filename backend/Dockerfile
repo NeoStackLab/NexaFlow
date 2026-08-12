@@ -22,6 +22,7 @@ RUN apk add --no-cache ca-certificates tzdata \
 WORKDIR /app
 COPY --from=builder /out/nexaflow-api /app/nexaflow-api
 COPY --chown=nexaflow:nexaflow configs /app/configs
+RUN mkdir -p /app/data && chown nexaflow:nexaflow /app/data
 
 USER nexaflow
 EXPOSE 8080

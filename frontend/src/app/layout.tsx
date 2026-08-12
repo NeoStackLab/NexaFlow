@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { IBM_Plex_Mono, Noto_Sans_SC } from "next/font/google";
 
 import "./globals.css";
+import { QueryProvider } from "@/components/providers/query-provider";
 
 const sans = Noto_Sans_SC({
   variable: "--font-nexaflow-sans",
@@ -27,7 +28,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       lang="zh-CN"
       className={`${sans.variable} ${mono.variable} h-full antialiased`}
     >
-      <body className="min-h-full">{children}</body>
+      <body className="min-h-full">
+        <QueryProvider>{children}</QueryProvider>
+      </body>
     </html>
   );
 }

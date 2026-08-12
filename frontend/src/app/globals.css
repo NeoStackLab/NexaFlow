@@ -352,3 +352,213 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+.install-shell {
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden;
+  color: var(--ink);
+  background: var(--ink);
+}
+
+.install-orbit {
+  position: fixed;
+  top: -28vw;
+  right: -22vw;
+  width: 70vw;
+  height: 70vw;
+  border: 1px solid oklch(1 0 0 / 7%);
+  border-radius: 999px;
+  box-shadow:
+    0 0 0 9vw oklch(1 0 0 / 1.5%),
+    0 0 0 18vw oklch(1 0 0 / 1%);
+  pointer-events: none;
+}
+
+.install-header {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  height: 72px;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid oklch(1 0 0 / 9%);
+  padding: 0 22px;
+  color: white;
+}
+
+.install-layout {
+  position: relative;
+  z-index: 1;
+  min-height: calc(100vh - 72px);
+}
+
+.install-progress {
+  display: none;
+  padding: 46px 26px 30px;
+  color: white;
+}
+
+.install-stage {
+  min-width: 0;
+  background-color: var(--canvas);
+  background-image:
+    linear-gradient(to right, color-mix(in oklch, var(--ink) 4%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in oklch, var(--ink) 4%, transparent) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+.install-stage-inner {
+  display: flex;
+  min-height: calc(100vh - 72px);
+  flex-direction: column;
+  padding: 34px 20px 22px;
+}
+
+.install-panel {
+  width: 100%;
+  max-width: 1120px;
+  flex: 1;
+}
+
+.install-kicker {
+  font-family: var(--font-nexaflow-mono);
+  font-size: 9px;
+  font-weight: 600;
+  letter-spacing: 0.21em;
+  color: var(--ink-muted);
+}
+
+.install-emblem {
+  display: grid;
+  width: 66px;
+  height: 66px;
+  place-items: center;
+  background: var(--signal);
+  box-shadow: 8px 8px 0 color-mix(in oklch, var(--ink) 12%, transparent);
+}
+
+.install-step {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  border-left: 2px solid transparent;
+  padding: 11px 12px;
+  color: oklch(1 0 0 / 35%);
+  transition: 160ms ease;
+}
+
+.install-step-index {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  flex: none;
+  place-items: center;
+  border: 1px solid oklch(1 0 0 / 14%);
+  font-family: var(--font-nexaflow-mono);
+  font-size: 9px;
+}
+
+.install-step-active {
+  border-left-color: var(--signal);
+  color: white;
+  background: oklch(1 0 0 / 5%);
+}
+
+.install-step-active .install-step-index {
+  border-color: var(--signal);
+  color: var(--ink);
+  background: var(--signal);
+}
+
+.install-step-complete { color: oklch(1 0 0 / 56%); }
+.install-step-complete .install-step-index { border-color: oklch(0.78 0.18 138 / 45%); color: var(--signal); }
+
+.install-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 1120px;
+  border-top: 1px solid color-mix(in oklch, var(--ink) 15%, transparent);
+  padding-top: 20px;
+  margin-top: 34px;
+}
+
+.install-button-primary,
+.install-button-secondary {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 0 17px;
+  font-size: 12px;
+  font-weight: 700;
+  transition: transform 150ms ease, background 150ms ease, opacity 150ms ease;
+}
+
+.install-button-primary { color: white; background: var(--ink); }
+.install-button-primary:hover:not(:disabled) { transform: translateY(-2px); background: oklch(0.25 0.018 240); }
+.install-button-primary:disabled, .install-button-secondary:disabled { cursor: not-allowed; opacity: 0.35; }
+.install-button-secondary { border: 1px solid color-mix(in oklch, var(--ink) 20%, transparent); color: var(--ink); background: transparent; }
+.install-button-secondary:hover:not(:disabled) { background: color-mix(in oklch, var(--ink) 5%, transparent); }
+
+.environment-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  border-bottom: 1px solid color-mix(in oklch, var(--ink) 11%, transparent);
+  padding: 15px;
+}
+.environment-row:last-child { border-bottom: 0; }
+.install-tag { border: 1px solid color-mix(in oklch, var(--ink) 18%, transparent); padding: 2px 5px; font-family: var(--font-nexaflow-mono); font-size: 7px; letter-spacing: 0.14em; color: var(--ink-muted); }
+.install-status { flex: none; padding: 3px 6px; font-family: var(--font-nexaflow-mono); font-size: 8px; font-weight: 600; letter-spacing: 0.12em; }
+.install-status.pass { color: oklch(0.34 0.12 145); background: oklch(0.9 0.08 145); }
+.install-status.warn { color: oklch(0.4 0.12 70); background: oklch(0.91 0.08 82); }
+.install-status.fail { color: oklch(0.4 0.17 27); background: oklch(0.91 0.06 27); }
+
+.install-fieldset {
+  border: 1px solid color-mix(in oklch, var(--ink) 17%, transparent);
+  padding: 20px;
+  background: color-mix(in oklch, white 38%, transparent);
+  box-shadow: 7px 7px 0 color-mix(in oklch, var(--ink) 5%, transparent);
+}
+.install-fieldset legend { display: flex; align-items: center; gap: 8px; padding: 0 8px; font-size: 12px; font-weight: 800; }
+.install-field { display: flex; min-width: 0; flex-direction: column; gap: 7px; }
+.install-field > span { font-size: 11px; font-weight: 700; }
+.install-field input, .install-field select {
+  width: 100%;
+  height: 42px;
+  border: 1px solid color-mix(in oklch, var(--ink) 20%, transparent);
+  padding: 0 11px;
+  color: var(--ink);
+  outline: none;
+  background: color-mix(in oklch, white 72%, var(--canvas));
+  font-family: var(--font-nexaflow-mono);
+  font-size: 12px;
+  transition: border 140ms ease, box-shadow 140ms ease;
+}
+.install-field input:focus, .install-field select:focus { border-color: var(--ink); box-shadow: 3px 3px 0 color-mix(in oklch, var(--signal) 55%, transparent); }
+.install-field small { color: var(--destructive); font-size: 10px; }
+.success-seal { display: grid; width: 82px; height: 82px; place-items: center; color: var(--ink); background: var(--signal); box-shadow: 10px 10px 0 color-mix(in oklch, var(--ink) 12%, transparent); }
+
+@media (min-width: 720px) {
+  .install-header { padding: 0 34px; }
+  .install-stage-inner { padding: 48px 46px 30px; }
+}
+
+@media (min-width: 1024px) {
+  .install-layout { display: grid; grid-template-columns: 260px minmax(0, 1fr); }
+  .install-progress { display: flex; min-height: calc(100vh - 72px); flex-direction: column; }
+  .install-stage-inner { padding: 6vh 6vw 34px; }
+}
+
+.auth-shell { min-height: 100vh; background: var(--canvas); }
+.auth-brand { display: flex; min-height: 44vh; align-items: flex-end; padding: 42px 24px; background: var(--ink); }
+.auth-form-panel { display: flex; min-height: 56vh; align-items: center; justify-content: center; padding: 44px 24px; }
+@media (min-width: 900px) {
+  .auth-shell { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(420px, .85fr); }
+  .auth-brand { min-height: 100vh; align-items: center; padding: 7vw; }
+  .auth-form-panel { min-height: 100vh; padding: 6vw; }
+}

@@ -15,9 +15,13 @@ import {
   ShieldCheck,
   Workflow,
 } from "lucide-react";
+import { redirect } from "next/navigation";
 
 import { SystemStatus } from "@/components/platform/system-status";
 import { Button } from "@/components/ui/button";
+import { getServerInstallStatus } from "@/lib/install/server";
+
+export const dynamic = "force-dynamic";
 
 const navigation = [
   { label: "总览", english: "Overview", icon: LayoutDashboard, active: true },
@@ -54,7 +58,10 @@ const foundations = [
   },
 ];
 
-export default function Home() {
+export default async function Home() {
+  const installation = await getServerInstallStatus();
+  if (installation && !installation.installed) redirect("/install");
+
   return (
     <div className="min-h-screen bg-canvas text-ink lg:grid lg:grid-cols-[268px_1fr]">
       <aside className="sidebar hidden lg:flex">

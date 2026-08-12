@@ -1,0 +1,15 @@
+"use client";
+
+import { useMutation } from "@tanstack/react-query";
+import { ArrowRight, Blocks, CircleAlert, LoaderCircle, UserPlus } from "lucide-react";
+import Link from "next/link";
+import { useState } from "react";
+import { register } from "@/lib/auth/api";
+import { getAPIError } from "@/lib/install/api";
+
+export function RegisterForm() {
+  const [username, setUsername] = useState(""); const [email, setEmail] = useState(""); const [password, setPassword] = useState(""); const [confirmation, setConfirmation] = useState("");
+  const mutation = useMutation({ mutationFn: () => register(username, email, password) });
+  const valid = username.length >= 3 && /^\S+@\S+\.\S+$/.test(email) && password.length >= 12 && password === confirmation;
+  return <main className="auth-shell"><section className="auth-brand"><div><div className="install-emblem"><Blocks className="size-8" /></div><p className="install-kicker mt-10 text-white/40">NEXAFLOW / JOIN WORKSPACE</p><h1 className="mt-4 text-[clamp(3rem,6vw,6.5rem)] font-black leading-[.86] tracking-[-.075em] text-white">加入团队，<br /><span className="text-signal">开始协作。</span></h1><p className="mt-7 max-w-lg text-sm leading-7 text-white/45">新注册账号只会获得普通员工角色。更高权限必须由管理员通过 RBAC 明确授予。</p></div></section><section className="auth-form-panel"><form className="w-full max-w-md" onSubmit={(event) => { event.preventDefault(); if (valid) mutation.mutate(); }}><UserPlus className="size-6" /><p className="install-kicker mt-8">REGISTER / 创建账号</p><h2 className="mt-3 text-4xl font-black tracking-[-.05em]">员工注册</h2><div className="mt-8 grid gap-4"><label className="install-field"><span>账号</span><input required minLength={3} value={username} onChange={(event) => setUsername(event.target.value)} /></label><label className="install-field"><span>邮箱</span><input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} /></label><label className="install-field"><span>密码</span><input required type="password" minLength={12} value={password} onChange={(event) => setPassword(event.target.value)} /></label><label className="install-field"><span>确认密码</span><input required type="password" value={confirmation} onChange={(event) => setConfirmation(event.target.value)} /></label></div>{mutation.isError && <div className="mt-5 flex gap-2 bg-red-50 p-4 text-xs text-red-900"><CircleAlert className="size-4 shrink-0" />{getAPIError(mutation.error)}</div>}{mutation.isSuccess ? <div className="mt-5 border-l-2 border-emerald-700 bg-emerald-50 p-4 text-xs text-emerald-900">账号已创建。<Link href="/login" className="ml-1 font-bold underline">现在登录</Link></div> : <button className="install-button-primary mt-6 w-full" disabled={!valid || mutation.isPending}>{mutation.isPending ? <LoaderCircle className="size-4 animate-spin" /> : null}创建账号<ArrowRight className="size-4" /></button>}<p className="mt-5 text-center text-xs text-ink-muted">已有账号？ <Link className="font-bold text-ink underline underline-offset-4" href="/login">返回登录</Link></p></form></section></main>;
+}

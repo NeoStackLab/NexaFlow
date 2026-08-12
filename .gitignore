@@ -2,6 +2,8 @@
 .env
 .env.local
 *.local.yaml
+backend/data/
+backend/.tmp-install-*/
 
 # Build output
 backend/bin/
