@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Activity, Database, Server } from "lucide-react";
 
 import { apiClient } from "@/lib/api/client";
+import { useBilingual } from "@/lib/i18n";
 
 type HealthStatus = {
   status: "ok" | "degraded";
@@ -24,6 +25,7 @@ type ViewState =
   | { kind: "unavailable" };
 
 export function SystemStatus() {
+  const t = useBilingual();
   const [state, setState] = useState<ViewState>({ kind: "loading" });
 
   useEffect(() => {
@@ -44,16 +46,16 @@ export function SystemStatus() {
   const isHealthy = state.kind === "available" && state.health.status === "ok";
   const label =
     state.kind === "loading"
-      ? "正在连接 / Connecting"
+      ? t("正在连接", "Connecting")
       : isHealthy
-        ? "基础服务正常 / Operational"
-        : "等待基础设施 / Infrastructure offline";
+        ? t("基础服务正常", "Operational")
+        : t("等待基础设施", "Infrastructure offline");
 
   return (
     <section
       className="status-panel reveal-delay-2"
       aria-live="polite"
-      aria-label="NexaFlow system status"
+      aria-label={t("NexaFlow 系统状态", "NexaFlow system status")}
     >
       <div className="flex items-center gap-3">
         <span
@@ -62,7 +64,7 @@ export function SystemStatus() {
         />
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-ink-muted">
-            Runtime status
+            {t("运行状态", "Runtime status")}
           </p>
           <p className="mt-1 text-sm font-semibold text-ink">{label}</p>
         </div>

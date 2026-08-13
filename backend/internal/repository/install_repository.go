@@ -228,7 +228,8 @@ func (r *installRepository) Complete(ctx context.Context, input model.CompleteIn
 			if err := tx.Clauses(clause.OnConflict{Columns: []clause.Column{{Name: "name"}}, DoNothing: true}).Create(&permission).Error; err != nil {
 				return fmt.Errorf("create permission %s: %w", item.Name, err)
 			}
-			if err := tx.Where("name = ?", item.Name).First(&permission).Error; err != nil {
+			permission, err = loadBootstrapPermissionByName(tx, permission)
+			if err != nil {
 				return fmt.Errorf("load permission %s: %w", item.Name, err)
 			}
 			for roleName, grants := range roleGrants {
@@ -279,6 +280,12 @@ func (r *installRepository) Complete(ctx context.Context, input model.CompleteIn
 		return model.InstallationResult{}, fmt.Errorf("write installation lock: %w", err)
 	}
 	return model.InstallationResult{AdminURL: "/admin", Username: input.Admin.Username, LockPath: r.lockPath()}, nil
+}
+
+func loadBootstrapPermissionByName(tx *gorm.DB, permission model.BootstrapPermission) (model.BootstrapPermission, error) {
+	var persisted model.BootstrapPermission
+	err := tx.Where("name = ?", permission.Name).First(&persisted).Error
+	return persisted, err
 }
 
 func (r *installRepository) RuntimeConfig() (model.InstallRuntimeConfig, error) {
