@@ -343,4 +343,6 @@ Named volumes 不是备份。生产恢复必须依赖经过验证的 PostgreSQL 
 
 ## License
 
-Apache License 2.0，参见 [LICENSE](LICENSE)。
+NexaFlow 采用 Apache License 2.0，参见 [LICENSE](LICENSE)。该协议允许使用、修改、分发和商业使用，同时要求保留许可证、版权及必要的变更声明，并提供专利授权条款。
+
+Apache-2.0 适合开源自建和商业服务场景，但不限制他人基于本项目提供托管/SaaS 服务。如需限制该类使用，应在发布前另行制定 AGPL、双许可证或商业许可证策略，并取得法律意见；不要仅修改许可证文件就改变既有授权。

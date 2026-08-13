@@ -9,26 +9,21 @@ speculation—justifies distributed services.
 
 ### System context
 
-```mermaid
-flowchart TB
-    User["Enterprise user"] --> Web["Next.js web application"]
-    Admin["Platform administrator"] --> Web
-    Web -->|"HTTPS + JSON"| API["Go / Gin REST API"]
-    API --> PG[("PostgreSQL 18")]
-    API --> Redis[("Redis 8")]
-    API -. optional .-> MQ["RabbitMQ"]
-    API --> S3["Local / S3 / R2 storage"]
-    API --> AI["OpenAI-compatible provider"]
+```text
+Enterprise user ──────┐
+                       ├── Next.js web application ── HTTPS + JSON ── Go / Gin REST API
+Platform administrator ┘                                      │
+                                                              ├── PostgreSQL 18 + pgvector
+                                                              ├── Redis 8
+                                                              ├── Local / S3 / Cloudflare R2 storage
+                                                              ├── OpenAI-compatible provider
+                                                              └── RabbitMQ (optional)
 ```
 
 ### Backend dependency rule
 
-```mermaid
-flowchart LR
-    Request["HTTP request"] --> Handler
-    Handler --> Service
-    Service --> Repository
-    Repository --> Database[("Database / cache")]
+```text
+HTTP request  →  Handler  →  Service  →  Repository  →  PostgreSQL / Redis
 ```
 
 - Handlers translate transport input and output; they never use GORM directly.
