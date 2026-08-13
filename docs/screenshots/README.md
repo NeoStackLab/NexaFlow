@@ -1,58 +1,35 @@
-# NexaFlow product screenshots
+# NexaFlow screenshot catalog
 
-These screenshots are captured from the real Next.js application at desktop
-and mobile breakpoints. They may be used in the project README, release notes,
-GitHub social posts, and product documentation.
+These screenshots are current captures from the real Next.js application at desktop and mobile breakpoints. The capture session used the English locale and an isolated local showcase workspace with demonstration data only.
 
-## Docker-first initialization
+The installer readiness screen uses a read-only documentation fixture so the page can show every required check as passing without changing an installed instance. Authenticated screenshots use the normal login flow and the same local showcase fixture.
 
-![Initialization welcome](showcase/01-install-welcome.png)
+## Installation flow
 
-## Infrastructure readiness
-
-This view intentionally shows failed PostgreSQL and Redis checks because the
-capture instance was started without Docker infrastructure. It demonstrates the
-real remediation experience rather than fabricated healthy data.
+![Installation welcome](showcase/01-install-welcome.png)
 
 ![Service readiness](showcase/02-service-readiness.png)
 
+![Mobile installation](showcase/05-install-mobile.png)
+
 ## Authentication
 
-![Login](showcase/03-login.png)
+![Sign in](showcase/03-login.png)
 
-![Registration](showcase/04-register.png)
+![Employee registration](showcase/04-register.png)
 
-## Mobile initialization
-
-![Mobile initialization](showcase/05-install-mobile.png)
-
-## Authenticated administration showcase
-
-The following screenshots use the real Next.js administration pages and were
-captured after completing the normal login flow. Business names, totals,
-documents, workflows, and conversations come from an isolated local showcase
-fixture; they are demonstration data rather than production records.
-
-### Administration dashboard
+## Administration console
 
 ![Administration dashboard](showcase/06-admin-dashboard.png)
 
-### Dynamic data models
+![Entity designer](showcase/07-admin-entities.png)
 
-![Dynamic data models](showcase/07-admin-entities.png)
+![Workflow center](showcase/08-admin-workflows.png)
 
-### Workflow studio
+![Enterprise AI workspace](showcase/09-admin-ai.png)
 
-![Workflow studio](showcase/08-admin-workflows.png)
-
-### Enterprise AI workbench
-
-![Enterprise AI workbench](showcase/09-admin-ai.png)
-
-### File workspace
-
-![File workspace](showcase/10-admin-files.png)
-
-### Plans and usage
+![Tenant files](showcase/10-admin-files.png)
 
 ![Plans and usage](showcase/11-admin-billing.png)
+
+All paths in this catalog are repository-relative so they render correctly in the root README and on GitHub.

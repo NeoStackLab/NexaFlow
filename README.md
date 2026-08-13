@@ -1,348 +1,325 @@
 # NexaFlow
 
-开源、AI 原生、多租户的企业业务应用平台。NexaFlow 通过动态数据模型、业务记录、表单、工作流、权限、文件、知识库和 AI Agent 组合企业内部应用，可作为 CRM、订单管理、项目管理和审批系统的通用底座。
+NexaFlow is an open-source, AI-native, multi-tenant business operating system for building internal enterprise applications. It combines dynamic data models, records, forms, workflows, permissions, files, knowledge, and AI assistance behind one tenant-aware platform.
 
-当前版本采用 Go + Next.js 的前后端分离架构，推荐使用 Docker Compose 安装和运行。
+The repository uses a Go API and a Next.js web application. Docker Compose is the recommended way to run the complete stack.
 
-## 当前能力
+![NexaFlow dashboard](docs/screenshots/showcase/06-admin-dashboard.png)
 
-- 六步首次安装向导，自动检查 PostgreSQL、Redis 和持久化目录
-- 多租户企业空间、JWT 会话、角色权限和动态菜单
-- 动态实体与字段定义，统一 JSONB 业务记录存储
-- 通用 CRUD、表单构建器和 JSON Schema 校验
-- 审批、条件、通知节点组成的可执行工作流
-- 企业文件空间，本地、S3、Cloudflare R2 存储支持
-- pgvector 企业知识库和权限受控的 AI Agent
-- 纯白冷蓝 SaaS 管理后台和真实数据总览
-- SaaS 套餐、用量计数、Stripe Checkout 和 Webhook
-- 中英文界面，默认简体中文
+## What NexaFlow is for
 
-## 技术栈
+NexaFlow is a configurable foundation for internal business systems. Teams define their own entities, fields, records, forms, approval flows, files, and permissions instead of starting from a fixed industry template. Typical uses include:
 
-| 层级 | 技术 |
+- CRM-style customer, account, renewal, and sales operations
+- Lightweight ERP workflows for orders, procurement, inventory requests, and approvals
+- Project, service, compliance, and document processes that need auditable roles
+- Department-specific applications that share one tenant-aware data and workflow core
+
+It is best understood as a low-code business operations platform rather than a finished, industry-specific CRM or full ERP suite. The platform supplies reusable primitives; each workspace shapes the business schema and process rules.
+
+## AI module
+
+The AI workspace is a permission-scoped assistant for tenant knowledge and authorized business data. It is designed to help users find policy or product information, summarize uploaded documents, and answer questions about the current workspace without bypassing RBAC.
+
+The flow is:
+
+1. An administrator uploads PDF, DOCX, XLSX, TXT, Markdown, CSV, or JSON knowledge files.
+2. NexaFlow extracts and chunks the content, creates embeddings, and stores vectors in pgvector.
+3. A user asks a question in the AI workspace.
+4. The server performs tenant-scoped knowledge search and may read bounded business records only when the current user has the relevant record permission.
+5. Sources, tool calls, conversations, and token usage are persisted for audit and usage metering.
+
+AI is provider-agnostic through an OpenAI-compatible API. Set AI_API_KEY to enable ingestion and chat; AI_BASE_URL, AI_CHAT_MODEL, and AI_EMBEDDING_MODEL select a compatible provider and models. Without a key, the endpoint fails closed with an unavailable response and never generates a fake answer. See the [AI API contract](docs/api.md#knowledge-and-ai-agent) and [deployment requirements](docs/deployment.md#production-requirements) for details.
+
+## Product showcase
+
+The screenshots below are current English-locale captures from the local application. They use an isolated showcase workspace with demo data and do not contain production credentials.
+
+![Installation welcome](docs/screenshots/showcase/01-install-welcome.png)
+![Service readiness](docs/screenshots/showcase/02-service-readiness.png)
+![Sign in](docs/screenshots/showcase/03-login.png)
+![Entity designer](docs/screenshots/showcase/07-admin-entities.png)
+![Workflow center](docs/screenshots/showcase/08-admin-workflows.png)
+![AI workspace](docs/screenshots/showcase/09-admin-ai.png)
+
+## Capabilities
+
+- Six-step first-run installer with PostgreSQL, Redis, storage, and capability checks
+- Multi-tenant workspaces with JWT sessions, RBAC, tenant-scoped menus, and audit-friendly permissions
+- Dynamic entities and fields backed by validated JSONB records
+- Generic business-data CRUD, form builder, and generated JSON Schema
+- Executable approval, condition, and notification workflows
+- Tenant file space with local, S3, and Cloudflare R2 storage providers
+- pgvector-backed knowledge search and permission-scoped AI assistance
+- SaaS plans, usage metering, Stripe Checkout, and verified webhooks
+- Chinese and English UI, with Simplified Chinese as the default locale
+
+## Technology stack
+
+| Layer | Technology |
 | --- | --- |
-| 前端 | Next.js 16.3、React 19、TypeScript、Tailwind CSS 4、TanStack Query |
-| 后端 | Go 1.26.5、Gin、GORM、Zap |
-| 数据库 | PostgreSQL 18、pgvector 0.8.6 |
-| 缓存 | Redis 8.8 |
-| 部署 | Docker Desktop、Docker Compose、多阶段非 root 镜像 |
+| Web | Next.js 16.3, React 19, TypeScript, Tailwind CSS 4, TanStack Query |
+| API | Go 1.26.5, Gin, GORM, Zap |
+| Database | PostgreSQL 18 with pgvector 0.8.6 |
+| Cache | Redis 8.8 |
+| Runtime | Docker Desktop, Docker Compose, multi-stage non-root images |
 
-## 项目结构
+## Repository layout
 
-```text
+~~~text
 NexaFlow/
 ├── backend/
-│   ├── cmd/server/             # Go API 启动入口
-│   ├── configs/                # 后端默认配置
+│   ├── cmd/server/             # Go API entry point
+│   ├── configs/                # Default API configuration
 │   └── internal/
-│       ├── api/                # Gin 路由注册
-│       ├── handler/            # HTTP 输入输出层
-│       ├── middleware/         # 鉴权、租户和通用中间件
-│       ├── model/              # 领域与持久化模型
-│       ├── pkg/                # 数据库、缓存、日志等基础包
-│       ├── repository/         # PostgreSQL/Redis 数据访问
-│       └── service/            # 业务规则与事务边界
+│       ├── api/                # Gin route registration
+│       ├── handler/            # HTTP input/output layer
+│       ├── middleware/         # Auth, tenant, and shared middleware
+│       ├── model/              # Domain and persistence models
+│       ├── pkg/                # Database, cache, logging, and infrastructure
+│       ├── repository/         # PostgreSQL and Redis access
+│       └── service/            # Business rules and transaction boundaries
 ├── frontend/
-│   ├── public/                 # 静态资源
+│   ├── public/                 # Static assets
 │   └── src/
-│       ├── app/                # Next.js App Router 页面和布局
-│       │   ├── admin/          # 管理后台路由
-│       │   ├── api/            # 前端健康检查 Route Handler
-│       │   ├── install/        # 首次安装向导
-│       │   ├── login/          # 登录
-│       │   └── register/       # 员工注册
-│       ├── components/         # 后台、表单、工作流和通用组件
-│       └── lib/                # API 客户端、状态和业务类型
-├── docker/compose.yaml         # 完整容器编排
-├── docs/                       # 架构、API、数据库和部署文档
-├── scripts/verify.ps1          # 后端和前端质量检查
-├── .env.example                # 环境变量模板
+│       ├── app/                # Next.js App Router routes
+│       ├── components/         # Admin, form, workflow, and shared UI
+│       └── lib/                # API clients, state, and domain types
+├── docker/compose.yaml         # Full local stack
+├── docs/                       # Architecture, API, database, and deployment docs
+├── scripts/verify.ps1          # Backend and frontend quality checks
+├── .env.example                # Environment template
 └── README.md
-```
+~~~
 
-后端依赖方向固定为：
+The API dependency direction is intentionally fixed:
 
-```text
-HTTP Request → Handler → Service → Repository → PostgreSQL / Redis
-```
+~~~text
+HTTP request → handler → service → repository → PostgreSQL / Redis
+~~~
 
-动态实体不会为每个实体创建独立 PostgreSQL 表。实体定义保存在 `entities`/`entity_fields`，业务数据统一存入 `dynamic_records.values` JSONB，并通过 `tenant_id` 和 `entity_id` 隔离。
+Dynamic entities do not create one PostgreSQL table per entity. Definitions live in entities and entity_fields; business records live in dynamic_records.values as JSONB and are isolated by tenant_id and entity_id.
 
-## Windows 首次安装（推荐）
+## Quick start on Windows
 
-### 1. 准备环境
+### Prerequisites
 
-需要安装并启动：
+- Docker Desktop with Docker Compose
+- Git, if you are cloning the repository
 
-- Docker Desktop（包含 Docker Compose）
-- Git（仅克隆代码时需要）
+Confirm Docker is running before starting:
 
-在 PowerShell 中确认 Docker 已运行：
-
-```powershell
+~~~powershell
 docker desktop status
 docker version
 docker compose version
-```
+~~~
 
-如果状态是 `starting`，等待 Docker Desktop 显示 `running` 后再继续。
+If Docker Desktop reports starting, wait until it reports running.
 
-### 2. 创建 `.env`
+### 1. Create the environment file
 
-```powershell
+~~~powershell
 Set-Location F:\spacex\NexaFlow
 Copy-Item .env.example .env
-```
+~~~
 
-生成兼容 Windows PowerShell 5.1/旧版 .NET 的 JWT 密钥：
+Generate a JWT secret compatible with Windows PowerShell 5.1 and older .NET runtimes:
 
-```powershell
+~~~powershell
 $bytes = New-Object byte[] 48
 $rng = [System.Security.Cryptography.RNGCryptoServiceProvider]::Create()
 $rng.GetBytes($bytes)
 $jwtSecret = [Convert]::ToBase64String($bytes)
 $rng.Dispose()
 (Get-Content .env) -replace '^JWT_SECRET=.*$', "JWT_SECRET=$jwtSecret" | Set-Content .env
-```
+~~~
 
-不要使用 `[RandomNumberGenerator]::Fill()`，部分 Windows PowerShell/.NET 版本没有这个静态方法。
+Do not use the RandomNumberGenerator Fill method on older PowerShell/.NET versions; that static method may not exist.
 
-打开 `.env`，至少修改以下值：
+Edit .env and set strong local values at minimum:
 
-```dotenv
-POSTGRES_PASSWORD=一个强数据库密码
-REDIS_PASSWORD=一个强Redis密码
-JWT_SECRET=上一步自动生成的随机值
+~~~dotenv
+POSTGRES_PASSWORD=replace-with-a-strong-local-password
+REDIS_PASSWORD=replace-with-a-strong-local-password
+JWT_SECRET=the-random-value-generated-above
 NEXT_PUBLIC_API_URL=http://localhost:8080/api/v1
 CORS_ALLOWED_ORIGINS=http://localhost:3000
-```
+~~~
 
-AI、Stripe、S3/R2 均为可选能力，暂时不用可以保持空值。
+AI, Stripe, S3, and R2 settings are optional. Leave them empty when those capabilities are not needed.
 
-### 3. 首次构建和启动
+### 2. Build and start the stack
 
-```powershell
+~~~powershell
 docker compose --env-file .env -f docker\compose.yaml up --build -d
-```
-
-首次运行会下载并构建镜像，后续日常启动不会重复安装这些内容。
-
-检查状态：
-
-```powershell
 docker compose --env-file .env -f docker\compose.yaml ps
-```
+~~~
 
-等待以下四个服务全部显示 `healthy`：
+The first run downloads base images and builds the application images. Later starts reuse those images and named volumes; they do not reinstall the stack.
 
-- `nexaflow-postgres-1`
-- `nexaflow-redis-1`
-- `nexaflow-backend-1`
-- `nexaflow-frontend-1`
+Wait until PostgreSQL, Redis, the API, and the web container are all healthy.
 
-### 4. 完成浏览器安装向导
+### 3. Finish the browser installer
 
-打开：
+Open http://localhost:3000. An uninstalled instance redirects to /install. Complete the wizard in order:
 
-```text
-http://localhost:3000
-```
+1. Welcome
+2. Service readiness
+3. Optional capabilities
+4. Platform administrator
+5. Organization profile
+6. Completion and redirect to the admin console
 
-未安装时根地址自动进入 `/install`。按顺序完成：
+The installer stores initialization state in PostgreSQL. Uploaded files and database data are kept in Docker named volumes, so closing Docker Desktop or rebooting Windows does not require another installation.
 
-1. 阅读欢迎信息
-2. 检查 PostgreSQL、Redis、环境变量和持久化目录
-3. 确认可选 AI、支付和存储能力
-4. 创建首个超级管理员
-5. 设置企业名称、行业、默认语言和时区
-6. 完成安装并进入管理后台
+## Daily operations
 
-安装成功后，数据库和上传文件保存在 Docker named volumes 中。关闭 Docker Desktop或重启电脑不会丢失数据，也不需要重新安装。
+Start Docker Desktop when it is closed, then start the services:
 
-## 日常启动和停止
-
-Docker Desktop 已关闭时：
-
-```powershell
+~~~powershell
 Set-Location F:\spacex\NexaFlow
 docker desktop start
 docker desktop status
 docker compose --env-file .env -f docker\compose.yaml up -d
-```
+~~~
 
-Docker Desktop 已经运行时，只需：
+If Docker Desktop is already running, only the final docker compose up -d command is needed. Do not add --build for normal starts.
 
-```powershell
-Set-Location F:\spacex\NexaFlow
-docker compose --env-file .env -f docker\compose.yaml up -d
-```
+Useful URLs:
 
-日常启动不要加 `--build`。登录地址：
+| Purpose | URL |
+| --- | --- |
+| Web root | http://localhost:3000 |
+| Installer | http://localhost:3000/install |
+| Sign in | http://localhost:3000/login |
+| Admin console | http://localhost:3000/admin |
+| API liveness | http://localhost:8080/health/live |
+| API readiness | http://localhost:8080/health/ready |
+| Versioned API health | http://localhost:8080/api/v1/health |
 
-```text
-http://localhost:3000/login
-```
+Stop services without deleting data:
 
-后台地址：
-
-```text
-http://localhost:3000/admin
-```
-
-停止应用但保留全部数据：
-
-```powershell
+~~~powershell
 docker compose --env-file .env -f docker\compose.yaml stop
-```
+~~~
 
-停止并移除容器，但保留 named volumes 数据：
+Remove containers but keep named volumes:
 
-```powershell
+~~~powershell
 docker compose --env-file .env -f docker\compose.yaml down
-```
+~~~
 
-不要执行 `docker compose down -v`，`-v` 会删除 PostgreSQL、Redis 和 NexaFlow 持久化卷。
+Avoid docker compose down -v: -v deletes the PostgreSQL, Redis, and NexaFlow data volumes.
 
-## 更新代码后的重新部署
+## Updating the application
 
-拉取或修改代码后，需要重新构建应用镜像：
+After pulling or changing source code, rebuild the application images:
 
-```powershell
+~~~powershell
 Set-Location F:\spacex\NexaFlow
 docker compose --env-file .env -f docker\compose.yaml up --build -d
 docker compose --env-file .env -f docker\compose.yaml ps
-```
+~~~
 
-仅前端有变化时可以执行：
+For frontend-only changes:
 
-```powershell
+~~~powershell
 docker compose --env-file .env -f docker\compose.yaml build frontend
 docker compose --env-file .env -f docker\compose.yaml up -d --no-deps frontend
-```
+~~~
 
-浏览器仍显示旧界面时按 `Ctrl + F5` 强制刷新。
+Use Ctrl+F5 if the browser still shows an older bundle.
 
-## 地址和健康检查
+View service logs with:
 
-| 用途 | 地址 |
-| --- | --- |
-| Web 根地址 | <http://localhost:3000> |
-| 首次安装 | <http://localhost:3000/install> |
-| 登录 | <http://localhost:3000/login> |
-| 管理后台 | <http://localhost:3000/admin> |
-| API 存活检查 | <http://localhost:8080/health/live> |
-| API 就绪检查 | <http://localhost:8080/health/ready> |
-| 版本化 API 健康检查 | <http://localhost:8080/api/v1/health> |
-
-查看日志：
-
-```powershell
+~~~powershell
 docker compose --env-file .env -f docker\compose.yaml logs -f backend frontend
-```
+~~~
 
-## 常见问题
+## Troubleshooting
 
-### 端口已被占用
+### Port 5432 or 6379 is already in use
 
-本地 PostgreSQL 或 Redis 服务可能占用 `5432`/`6379`。先确认端口占用，再停止冲突服务或修改 Compose 端口。Windows PostgreSQL 18 的服务名常见为：
+Check for a local PostgreSQL or Redis service before stopping anything. A common Windows PostgreSQL service name is:
 
-```powershell
+~~~powershell
+Get-Service postgresql*
 Stop-Service postgresql-x64-18
-```
+~~~
 
-执行 `Stop-Service` 可能需要管理员 PowerShell。不要在没有冲突时每次都停止本机服务。
+The Stop-Service command may require an elevated PowerShell window. Only stop the service when it is the process holding the conflicting port.
 
-### Redis 显示 unhealthy
+### Redis is unhealthy
 
-```powershell
+~~~powershell
 docker compose --env-file .env -f docker\compose.yaml logs redis
 docker compose --env-file .env -f docker\compose.yaml up -d --force-recreate redis
-```
+~~~
 
-### 打开首页却不是后台
+### The root opens the wrong page
 
-当前版本根地址会根据安装状态跳转：未安装进入 `/install`，已安装进入 `/login`。若浏览器缓存了旧页面，按 `Ctrl + F5`，或直接访问 `/login`、`/admin`。
+The root route is state-aware: an uninstalled instance opens /install; an installed instance opens /login. Use Ctrl+F5, or open /login and /admin directly.
 
-### 查看容器状态
+## Local development
 
-```powershell
-docker desktop status
-docker compose --env-file .env -f docker\compose.yaml ps
-```
+The native toolchain is Go 1.26.5, Node.js 22, pnpm 11, PostgreSQL 18, and Redis 8.
 
-## 本地开发
+Backend:
 
-本地工具链：Go 1.26.5、Node.js 22、pnpm 11、PostgreSQL 18、Redis 8。
-
-后端：
-
-```powershell
+~~~powershell
 Set-Location backend
 go mod download
 go test ./...
 go run ./cmd/server
-```
+~~~
 
-前端（另一个 PowerShell）：
+Frontend (in a second PowerShell window):
 
-```powershell
+~~~powershell
 Set-Location frontend
 corepack enable
 corepack pnpm install --frozen-lockfile
 corepack pnpm lint
 corepack pnpm typecheck
 corepack pnpm dev
-```
+~~~
 
-完整质量检查：
+Run the repository quality checks from the project root:
 
-```powershell
-Set-Location F:\spacex\NexaFlow
+~~~powershell
 .\scripts\verify.ps1
-```
+~~~
 
-## 生产部署
+## Production deployment notes
 
-`docker/compose.yaml` 默认面向单机安装和本地验证。生产环境至少需要：
+docker/compose.yaml is optimized for a single-host installation and local validation. A production deployment should additionally:
 
-1. 使用独立随机的 PostgreSQL、Redis 和 JWT 密钥，并通过 Secret Manager/Docker Secrets 注入。
-2. 在反向代理或负载均衡器终止 HTTPS，只对外开放 Web 服务端口。
-3. 将 `CORS_ALLOWED_ORIGINS` 设置为准确的 HTTPS 前端域名。
-4. 构建前端镜像时将 `NEXT_PUBLIC_API_URL` 设置为公网 HTTPS API 地址。
-5. 不要向公网暴露 PostgreSQL `5432` 和 Redis `6379`。
-6. PostgreSQL 必须支持 pgvector，并建立定期备份和恢复演练。
-7. 对对象存储启用版本管理；使用本地存储时备份 `nexaflow_data`。
-8. Redis 开启认证、持久化、内存限制和适当的淘汰策略。
-9. 将 JSON 日志、指标和告警接入外部可观测平台。
-10. 发布前执行后端测试、Go vet、前端 Lint、类型检查和生产构建。
+1. Inject unique PostgreSQL, Redis, and JWT secrets through a secret manager or Docker Secrets.
+2. Terminate HTTPS at a reverse proxy and expose only the web/API entry points.
+3. Set CORS_ALLOWED_ORIGINS to the exact HTTPS frontend origin.
+4. Build the frontend with a public HTTPS NEXT_PUBLIC_API_URL.
+5. Keep PostgreSQL 5432 and Redis 6379 private.
+6. Use pgvector-capable PostgreSQL with tested backups and restore drills.
+7. Enable object-storage versioning, or back up the nexaflow_data volume when using local storage.
+8. Configure Redis authentication, persistence, memory limits, and eviction policy.
+9. Export JSON logs, metrics, and alerts to an external observability system.
+10. Run tests, go vet, frontend lint/type checks, and a production build before release.
 
-生产环境变量示例：
+Named volumes are not backups. Recovery must rely on tested PostgreSQL backups and object-storage versioning.
 
-```dotenv
-APP_ENV=production
-NEXT_PUBLIC_API_URL=https://api.example.com/api/v1
-CORS_ALLOWED_ORIGINS=https://app.example.com
-JWT_SECRET=<至少32字符的随机密钥>
-STORAGE_PROVIDER=s3
-STORAGE_ENDPOINT=<对象存储地址>
-STORAGE_BUCKET=<存储桶>
-```
+## Documentation
 
-Named volumes 不是备份。生产恢复必须依赖经过验证的 PostgreSQL 备份和对象存储版本。
-
-更多说明：
-
-- [安装设计](docs/installation.md)
-- [API 文档](docs/api.md)
-- [系统架构](docs/architecture.md)
-- [数据库设计](docs/database.md)
-- [开发指南](docs/development.md)
-- [部署指南](docs/deployment.md)
-- [安全边界](docs/security.md)
-- [插件扩展](docs/plugin.md)
+- [Installation design](docs/installation.md)
+- [API reference](docs/api.md)
+- [System architecture](docs/architecture.md)
+- [Database design](docs/database.md)
+- [Development guide](docs/development.md)
+- [Deployment guide](docs/deployment.md)
+- [Security boundaries](docs/security.md)
+- [Plugin extension guide](docs/plugin.md)
+- [Screenshot catalog](docs/screenshots/README.md)
 
 ## License
 
-NexaFlow 采用 Apache License 2.0，参见 [LICENSE](LICENSE)。该协议允许使用、修改、分发和商业使用，同时要求保留许可证、版权及必要的变更声明，并提供专利授权条款。
-
-Apache-2.0 适合开源自建和商业服务场景，但不限制他人基于本项目提供托管/SaaS 服务。如需限制该类使用，应在发布前另行制定 AGPL、双许可证或商业许可证策略，并取得法律意见；不要仅修改许可证文件就改变既有授权。
+NexaFlow is released under the [Apache License 2.0](LICENSE). The license permits use, modification, distribution, and commercial use, provided that the required copyright, license, notice, and patent terms are respected. Apache-2.0 also permits hosted or SaaS offerings based on the project.
