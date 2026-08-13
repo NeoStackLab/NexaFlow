@@ -117,10 +117,12 @@ docker compose version
 
 If Docker Desktop reports starting, wait until it reports running.
 
+The commands below use `<project-directory>` as a placeholder. Replace it with the directory where you cloned or extracted NexaFlow.
+
 ### 1. Create the environment file
 
 ~~~powershell
-Set-Location F:\spacex\NexaFlow
+Set-Location "<project-directory>"
 Copy-Item .env.example .env
 ~~~
 
@@ -178,7 +180,7 @@ The installer stores initialization state in PostgreSQL. Uploaded files and data
 Start Docker Desktop when it is closed, then start the services:
 
 ~~~powershell
-Set-Location F:\spacex\NexaFlow
+Set-Location "<project-directory>"
 docker desktop start
 docker desktop status
 docker compose --env-file .env -f docker\compose.yaml up -d
@@ -217,7 +219,7 @@ Avoid docker compose down -v: -v deletes the PostgreSQL, Redis, and NexaFlow dat
 After pulling or changing source code, rebuild the application images:
 
 ~~~powershell
-Set-Location F:\spacex\NexaFlow
+Set-Location "<project-directory>"
 docker compose --env-file .env -f docker\compose.yaml up --build -d
 docker compose --env-file .env -f docker\compose.yaml ps
 ~~~
