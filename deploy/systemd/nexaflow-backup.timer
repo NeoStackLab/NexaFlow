@@ -1,0 +1,11 @@
+[Unit]
+Description=Run NexaFlow backup daily
+
+[Timer]
+OnCalendar=*-*-* 02:17:00 UTC
+RandomizedDelaySec=15m
+Persistent=true
+Unit=nexaflow-backup.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,138 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: nexaflow-database-backup
+spec:
+  schedule: "17 2 * * *"
+  timeZone: Etc/UTC
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 3600
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 7200
+      ttlSecondsAfterFinished: 604800
+      template:
+        metadata:
+          labels: {app.kubernetes.io/name: nexaflow-backup}
+        spec:
+          serviceAccountName: nexaflow-backup
+          automountServiceAccountToken: false
+          restartPolicy: Never
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 70
+            runAsGroup: 70
+            fsGroup: 70
+            fsGroupChangePolicy: OnRootMismatch
+            seccompProfile: {type: RuntimeDefault}
+          containers:
+            - name: backup
+              image: ghcr.io/neostacklab/nexaflow-backup:replace-with-immutable-digest
+              args: [create]
+              envFrom:
+                - configMapRef: {name: nexaflow-backup}
+              env:
+                - {name: PGPASSWORD_FILE, value: /run/secrets/database-password}
+                - {name: AGE_RECIPIENT_FILE, value: /run/secrets/age-recipient}
+                - {name: BACKUP_SIGNING_PRIVATE_KEY_FILE, value: /run/secrets/signing-private-key}
+                - {name: BACKUP_S3_ACCESS_KEY_ID_FILE, value: /run/secrets/s3-access-key-id}
+                - {name: BACKUP_S3_SECRET_ACCESS_KEY_FILE, value: /run/secrets/s3-secret-access-key}
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities: {drop: [ALL]}
+              resources:
+                requests: {cpu: 100m, memory: 128Mi}
+                limits: {cpu: "1", memory: 1Gi}
+              volumeMounts:
+                - {name: secrets, mountPath: /run/secrets, readOnly: true}
+                - {name: tmp, mountPath: /tmp}
+          volumes:
+            - name: secrets
+              secret:
+                secretName: nexaflow-backup
+                defaultMode: 0440
+                items:
+                  - {key: database-password, path: database-password}
+                  - {key: age-recipient, path: age-recipient}
+                  - {key: signing-private-key, path: signing-private-key}
+                  - {key: s3-access-key-id, path: s3-access-key-id}
+                  - {key: s3-secret-access-key, path: s3-secret-access-key}
+            - name: tmp
+              emptyDir: {sizeLimit: 4Gi}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: nexaflow-restore-drill
+spec:
+  schedule: "43 3 * * 6"
+  timeZone: Etc/UTC
+  concurrencyPolicy: Forbid
+  startingDeadlineSeconds: 7200
+  successfulJobsHistoryLimit: 12
+  failedJobsHistoryLimit: 12
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      activeDeadlineSeconds: 10800
+      ttlSecondsAfterFinished: 2592000
+      template:
+        metadata:
+          labels: {app.kubernetes.io/name: nexaflow-backup}
+        spec:
+          serviceAccountName: nexaflow-backup
+          automountServiceAccountToken: false
+          restartPolicy: Never
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 70
+            runAsGroup: 70
+            fsGroup: 70
+            fsGroupChangePolicy: OnRootMismatch
+            seccompProfile: {type: RuntimeDefault}
+          containers:
+            - name: restore-drill
+              image: ghcr.io/neostacklab/nexaflow-backup:replace-with-immutable-digest
+              args: [restore-latest-drill]
+              envFrom:
+                - configMapRef: {name: nexaflow-backup}
+              env:
+                - {name: PGPASSWORD_FILE, value: /run/secrets/database-password}
+                - {name: PGADMIN_PASSWORD_FILE, value: /run/secrets/postgres-admin-password}
+                - {name: AGE_IDENTITY_FILE, value: /run/secrets/age-identity}
+                - {name: BACKUP_SIGNING_PRIVATE_KEY_FILE, value: /run/secrets/signing-private-key}
+                - {name: BACKUP_SIGNING_PUBLIC_KEY_FILE, value: /run/secrets/signing-public-key}
+                - {name: BACKUP_S3_ACCESS_KEY_ID_FILE, value: /run/secrets/s3-access-key-id}
+                - {name: BACKUP_S3_SECRET_ACCESS_KEY_FILE, value: /run/secrets/s3-secret-access-key}
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities: {drop: [ALL]}
+              resources:
+                requests: {cpu: 250m, memory: 256Mi}
+                limits: {cpu: "2", memory: 2Gi}
+              volumeMounts:
+                - {name: secrets, mountPath: /run/secrets, readOnly: true}
+                - {name: tmp, mountPath: /tmp}
+                - {name: evidence, mountPath: /evidence}
+          volumes:
+            - name: secrets
+              secret:
+                secretName: nexaflow-backup
+                defaultMode: 0440
+                items:
+                  - {key: database-password, path: database-password}
+                  - {key: postgres-admin-password, path: postgres-admin-password}
+                  - {key: age-identity, path: age-identity}
+                  - {key: signing-private-key, path: signing-private-key}
+                  - {key: signing-public-key, path: signing-public-key}
+                  - {key: s3-access-key-id, path: s3-access-key-id}
+                  - {key: s3-secret-access-key, path: s3-secret-access-key}
+            - name: tmp
+              emptyDir: {sizeLimit: 8Gi}
+            - name: evidence
+              emptyDir: {sizeLimit: 16Mi}

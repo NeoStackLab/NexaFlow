@@ -1,0 +1,5 @@
+version=4
+name=tenant_audit_events
+contract=Create audit_events and grant audit.view to active tenant admin and super_admin roles.
+risk=Adds an append-oriented tenant table and default administrative visibility.
+rollback=Disable audit routes before removing grants; retain event data according to policy.

@@ -1,0 +1,5 @@
+version=1
+name=baseline_schema
+contract=Create the pgvector extension and the initial tenant, identity, dynamic data, workflow, knowledge, billing, file, dashboard, and audit schema snapshot adopted at M2.
+risk=DDL locks are expected on a new or pre-ledger database. Existing version 1 ledgers are adopted by name and assigned this checksum.
+rollback=Restore from the pre-installation database backup. Destructive automatic down migration is intentionally unsupported.

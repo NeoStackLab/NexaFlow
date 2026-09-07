@@ -1,0 +1,29 @@
+# Local configuration and secrets
+.env
+.env.local
+.env.*.local
+*.local.yaml
+secrets/*
+!secrets/README.md.example
+artifacts/
+backend/data/
+backend/.tmp-install-*/
+
+# Build output
+backend/bin/
+backend/server
+frontend/.next/
+frontend/out/
+coverage/
+
+# Dependencies
+frontend/node_modules/
+
+# Editors and operating systems
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

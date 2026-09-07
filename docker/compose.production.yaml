@@ -1,0 +1,280 @@
+name: nexaflow-production
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: "5"
+
+x-runtime-security: &runtime-security
+  init: true
+  read_only: true
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  pids_limit: 256
+  restart: unless-stopped
+  logging: *default-logging
+
+services:
+  postgres:
+    image: ${POSTGRES_IMAGE:?set POSTGRES_IMAGE to an immutable digest}
+    restart: unless-stopped
+    shm_size: 256m
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER}
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB}
+      POSTGRES_INITDB_ARGS: --data-checksums
+      NEXAFLOW_DB_USER: ${DATABASE_USER:?set DATABASE_USER}
+      NEXAFLOW_DB_PASSWORD_FILE: /run/secrets/database_password
+    entrypoint: ["/bin/bash", "-Eeuc"]
+    command:
+      - |
+        export NEXAFLOW_DB_PASSWORD="$$(cat "$$NEXAFLOW_DB_PASSWORD_FILE")"
+        exec /usr/local/bin/docker-entrypoint.sh postgres
+    secrets: [postgres_password, database_password]
+    volumes:
+      - postgres_data:/var/lib/postgresql
+      - ./init-db.sh:/docker-entrypoint-initdb.d/10-nexaflow-app-role.sh:ro
+    tmpfs: [/tmp]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    deploy:
+      resources:
+        limits: {cpus: "2.0", memory: 4G}
+        reservations: {cpus: "0.5", memory: 1G}
+    networks: [data]
+
+  database-role-init:
+    image: ${POSTGRES_IMAGE:?set POSTGRES_IMAGE to an immutable digest}
+    restart: "no"
+    environment:
+      PGHOST: postgres
+      PGUSER: ${POSTGRES_USER:?set POSTGRES_USER}
+      PGDATABASE: ${POSTGRES_DB:?set POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER}
+      POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB}
+      NEXAFLOW_DB_USER: ${DATABASE_USER:?set DATABASE_USER}
+    entrypoint: ["/bin/bash", "-Eeuc"]
+    command:
+      - |
+        export PGPASSWORD="$$(cat /run/secrets/postgres_password)"
+        export NEXAFLOW_DB_PASSWORD="$$(cat /run/secrets/database_password)"
+        exec /opt/nexaflow/init-db.sh
+    secrets: [postgres_password, database_password]
+    volumes:
+      - ./init-db.sh:/opt/nexaflow/init-db.sh:ro
+    depends_on:
+      postgres: {condition: service_healthy}
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    read_only: true
+    tmpfs: [/tmp]
+    networks: [data]
+
+  redis:
+    image: ${REDIS_IMAGE:?set REDIS_IMAGE to an immutable digest}
+    restart: unless-stopped
+    entrypoint: ["/bin/sh", "-ec"]
+    command:
+      - exec redis-server --appendonly yes --appendfsync everysec --requirepass "$$(cat /run/secrets/redis_password)"
+    secrets: [redis_password]
+    volumes: [redis_data:/data]
+    healthcheck:
+      test: ["CMD-SHELL", "REDISCLI_AUTH=$$(cat /run/secrets/redis_password) redis-cli ping | grep PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 256
+    deploy:
+      resources:
+        limits: {cpus: "1.0", memory: 1G}
+        reservations: {cpus: "0.25", memory: 256M}
+    networks: [data]
+
+  backend:
+    <<: *runtime-security
+    image: ${BACKEND_IMAGE:?set BACKEND_IMAGE to a signed immutable release digest}
+    command: ["-config", "/app/configs/config.production.yaml"]
+    environment:
+      APP_ENV: production
+      SERVER_PORT: 8080
+      SERVER_SHUTDOWN_TIMEOUT: 30s
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_USER: ${DATABASE_USER:?set DATABASE_USER}
+      DATABASE_PASSWORD_FILE: /run/secrets/database_password
+      DATABASE_NAME: ${POSTGRES_DB:?set POSTGRES_DB}
+      DATABASE_SSLMODE: disable
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD_FILE: /run/secrets/redis_password
+      AUTH_JWT_SECRET_FILE: /run/secrets/jwt_secret
+      CORS_ALLOWED_ORIGINS: ${PUBLIC_ORIGIN:?set PUBLIC_ORIGIN}
+      LOG_LEVEL: info
+      LOG_FORMAT: json
+      INSTALL_DATA_DIR: /app/data
+      INSTALL_MODE: manual
+      STORAGE_PROVIDER: ${STORAGE_PROVIDER:?set STORAGE_PROVIDER to s3 or r2}
+      STORAGE_ENDPOINT: ${STORAGE_ENDPOINT:?set STORAGE_ENDPOINT}
+      STORAGE_REGION: ${STORAGE_REGION:?set STORAGE_REGION}
+      STORAGE_BUCKET: ${STORAGE_BUCKET:?set STORAGE_BUCKET}
+      STORAGE_ACCESS_KEY_ID_FILE: /run/secrets/storage_access_key_id
+      STORAGE_SECRET_ACCESS_KEY_FILE: /run/secrets/storage_secret_access_key
+      BILLING_SUCCESS_URL: ${BILLING_SUCCESS_URL:?set BILLING_SUCCESS_URL}
+      BILLING_CANCEL_URL: ${BILLING_CANCEL_URL:?set BILLING_CANCEL_URL}
+      OBSERVABILITY_ENABLED: "true"
+      OBSERVABILITY_ENDPOINT: ${OTEL_EXPORTER_ENDPOINT:?set OTEL_EXPORTER_ENDPOINT}
+      OBSERVABILITY_INSECURE: "false"
+    secrets: [database_password, redis_password, jwt_secret, storage_access_key_id, storage_secret_access_key]
+    volumes: [nexaflow_data:/app/data]
+    tmpfs: [/tmp]
+    expose: ["8080"]
+    stop_grace_period: 40s
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/health/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+    depends_on:
+      database-role-init: {condition: service_completed_successfully}
+      redis: {condition: service_healthy}
+    deploy:
+      resources:
+        limits: {cpus: "2.0", memory: 2G}
+        reservations: {cpus: "0.25", memory: 256M}
+    networks: [data, edge]
+
+  frontend:
+    <<: *runtime-security
+    image: ${FRONTEND_IMAGE:?set FRONTEND_IMAGE to a signed immutable release digest}
+    environment:
+      NODE_ENV: production
+      NEXAFLOW_INTERNAL_API_URL: http://backend:8080/api/v1
+    tmpfs: [/tmp]
+    expose: ["3000"]
+    stop_grace_period: 30s
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:3000/api/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 20s
+    depends_on:
+      backend: {condition: service_healthy}
+    deploy:
+      resources:
+        limits: {cpus: "1.0", memory: 1G}
+        reservations: {cpus: "0.1", memory: 128M}
+    networks: [edge]
+
+  proxy:
+    <<: *runtime-security
+    image: ${NGINX_IMAGE:?set NGINX_IMAGE to an immutable nginx-unprivileged digest}
+    ports: ["80:8080", "443:8443"]
+    volumes:
+      - ./production/nginx.conf:/etc/nginx/nginx.conf:ro
+    secrets: [tls_certificate, tls_private_key]
+    tmpfs: [/tmp, /var/cache/nginx]
+    stop_grace_period: 30s
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-check-certificate -q -O /dev/null https://127.0.0.1:8443/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    depends_on:
+      backend: {condition: service_healthy}
+      frontend: {condition: service_healthy}
+    deploy:
+      resources:
+        limits: {cpus: "1.0", memory: 256M}
+        reservations: {cpus: "0.1", memory: 64M}
+    networks: [edge]
+
+  backup:
+    profiles: [operations]
+    image: ${BACKUP_IMAGE:?set BACKUP_IMAGE to a signed immutable release digest}
+    environment:
+      PGHOST: postgres
+      PGPORT: 5432
+      PGDATABASE: ${POSTGRES_DB:?set POSTGRES_DB}
+      PGUSER: ${DATABASE_USER:?set DATABASE_USER}
+      PGPASSWORD_FILE: /run/secrets/database_password
+      AGE_RECIPIENT_FILE: /run/secrets/backup_age_recipient
+      BACKUP_SIGNING_PRIVATE_KEY_FILE: /run/secrets/backup_signing_private_key
+      BACKUP_S3_URI: ${BACKUP_S3_URI:?set BACKUP_S3_URI}
+      BACKUP_S3_ENDPOINT: ${BACKUP_S3_ENDPOINT:-}
+      BACKUP_S3_REGION: ${BACKUP_S3_REGION:-us-east-1}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-35}
+      BACKUP_S3_ACCESS_KEY_ID_FILE: /run/secrets/backup_s3_access_key_id
+      BACKUP_S3_SECRET_ACCESS_KEY_FILE: /run/secrets/backup_s3_secret_access_key
+    secrets: [database_password, backup_age_recipient, backup_signing_private_key, backup_s3_access_key_id, backup_s3_secret_access_key]
+    entrypoint: ["/opt/nexaflow/backup"]
+    command: ["help"]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: [/tmp]
+    networks: [data]
+
+  recovery:
+    profiles: [operations]
+    image: ${BACKUP_IMAGE:?set BACKUP_IMAGE to a signed immutable release digest}
+    environment:
+      PGHOST: postgres
+      PGPORT: 5432
+      PGDATABASE: ${POSTGRES_DB:?set POSTGRES_DB}
+      PGUSER: ${DATABASE_USER:?set DATABASE_USER}
+      PGPASSWORD_FILE: /run/secrets/database_password
+      PGADMIN_USER: ${POSTGRES_USER:?set POSTGRES_USER}
+      PGADMIN_PASSWORD_FILE: /run/secrets/postgres_password
+      AGE_IDENTITY_FILE: /run/secrets/backup_age_identity
+      BACKUP_SIGNING_PRIVATE_KEY_FILE: /run/secrets/backup_signing_private_key
+      BACKUP_SIGNING_PUBLIC_KEY_FILE: /run/secrets/backup_signing_public_key
+      BACKUP_S3_URI: ${BACKUP_S3_URI:?set BACKUP_S3_URI}
+      BACKUP_S3_ENDPOINT: ${BACKUP_S3_ENDPOINT:-}
+      BACKUP_S3_REGION: ${BACKUP_S3_REGION:-us-east-1}
+      BACKUP_EVIDENCE_S3_URI: ${BACKUP_EVIDENCE_S3_URI:?set BACKUP_EVIDENCE_S3_URI}
+      BACKUP_S3_ACCESS_KEY_ID_FILE: /run/secrets/backup_s3_access_key_id
+      BACKUP_S3_SECRET_ACCESS_KEY_FILE: /run/secrets/backup_s3_secret_access_key
+    secrets: [database_password, postgres_password, backup_age_identity, backup_signing_private_key, backup_signing_public_key, backup_s3_access_key_id, backup_s3_secret_access_key]
+    entrypoint: ["/opt/nexaflow/backup"]
+    command: ["help"]
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: [/tmp]
+    networks: [data]
+
+secrets:
+  postgres_password: {file: ../secrets/postgres_password}
+  database_password: {file: ../secrets/database_password}
+  redis_password: {file: ../secrets/redis_password}
+  jwt_secret: {file: ../secrets/jwt_secret}
+  storage_access_key_id: {file: ../secrets/storage_access_key_id}
+  storage_secret_access_key: {file: ../secrets/storage_secret_access_key}
+  backup_age_recipient: {file: ../secrets/backup_age_recipient}
+  backup_age_identity: {file: ../secrets/backup_age_identity}
+  backup_signing_private_key: {file: ../secrets/backup_signing_private_key}
+  backup_signing_public_key: {file: ../secrets/backup_signing_public_key}
+  backup_s3_access_key_id: {file: ../secrets/backup_s3_access_key_id}
+  backup_s3_secret_access_key: {file: ../secrets/backup_s3_secret_access_key}
+  tls_certificate: {file: ../secrets/tls.crt}
+  tls_private_key: {file: ../secrets/tls.key}
+
+volumes:
+  postgres_data:
+  redis_data:
+  nexaflow_data:
+
+networks:
+  edge:
+  data:
+    internal: true

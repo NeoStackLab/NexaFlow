@@ -1,0 +1,94 @@
+name: Recovery drill
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "43 3 * * 6"
+
+permissions:
+  contents: read
+
+jobs:
+  backup-and-restore:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: nexaflow
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres -d nexaflow"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      BACKUP_IMAGE: nexaflow-backup:recovery-drill
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build the production recovery image
+        run: docker build --tag "$BACKUP_IMAGE" docker/backup
+      - name: Seed representative schema
+        run: |
+          docker run --rm --interactive --network host \
+            -e PGPASSWORD=postgres \
+            postgres:18 \
+            psql --no-psqlrc --host localhost --username postgres --dbname nexaflow <<'SQL'
+          CREATE TABLE schema_migrations (version bigint PRIMARY KEY, name text NOT NULL);
+          INSERT INTO schema_migrations VALUES (1, 'baseline');
+          CREATE TABLE tenants (id uuid PRIMARY KEY, name text NOT NULL);
+          INSERT INTO tenants VALUES ('00000000-0000-0000-0000-000000000001', 'Recovery Drill');
+          SQL
+      - name: Generate ephemeral drill keys
+        run: |
+          mkdir -p artifacts/keys artifacts/backups artifacts/evidence
+          chmod 0777 artifacts/keys artifacts/backups artifacts/evidence
+          docker run --rm --user 70:70 \
+            --entrypoint /bin/sh \
+            -v "${{ github.workspace }}/artifacts:/artifacts" \
+            "$BACKUP_IMAGE" -ec '
+              age-keygen -o /artifacts/keys/age-identity.txt 2>/artifacts/keys/age-generation.log
+              age-keygen -y /artifacts/keys/age-identity.txt >/artifacts/keys/age-recipient.txt
+              minisign -G -W -p /artifacts/keys/minisign.pub -s /artifacts/keys/minisign.key
+            '
+      - name: Create encrypted signed backup
+        run: |
+          docker run --rm --network host \
+            -e PGHOST=localhost -e PGPORT=5432 -e PGDATABASE=nexaflow \
+            -e PGUSER=postgres -e PGPASSWORD=postgres \
+            -e AGE_RECIPIENT_FILE=/artifacts/keys/age-recipient.txt \
+            -e BACKUP_SIGNING_PRIVATE_KEY_FILE=/artifacts/keys/minisign.key \
+            -e BACKUP_LOCAL_DIR=/artifacts/backups \
+            -v "${{ github.workspace }}/artifacts:/artifacts" \
+            "$BACKUP_IMAGE" create | tee artifacts/backup-result.txt
+      - name: Restore into isolated database and validate
+        run: |
+          manifest=$(sed -n 's/^manifest_uri=//p' artifacts/backup-result.txt | tail -n 1)
+          test -n "$manifest"
+          docker run --rm --network host \
+            -e PGHOST=localhost -e PGPORT=5432 -e PGDATABASE=nexaflow \
+            -e PGUSER=postgres -e PGPASSWORD=postgres \
+            -e PGADMIN_USER=postgres -e PGADMIN_PASSWORD=postgres \
+            -e AGE_IDENTITY_FILE=/artifacts/keys/age-identity.txt \
+            -e BACKUP_SIGNING_PUBLIC_KEY_FILE=/artifacts/keys/minisign.pub \
+            -e BACKUP_EVIDENCE_DIR=/artifacts/evidence \
+            -v "${{ github.workspace }}/artifacts:/artifacts" \
+            "$BACKUP_IMAGE" restore-drill "$manifest"
+      - name: Remove private drill keys
+        if: always()
+        run: |
+          find artifacts/keys -type f -delete
+          sudo chown -R "$(id -u):$(id -g)" artifacts/evidence
+      - name: Upload recovery evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: recovery-drill-${{ github.run_id }}
+          path: |
+            artifacts/evidence
+            artifacts/backup-result.txt
+          if-no-files-found: error
+          retention-days: 30

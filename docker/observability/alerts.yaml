@@ -1,0 +1,33 @@
+groups:
+  - name: nexaflow-slo
+    rules:
+      - alert: NexaFlowAPIHighErrorBurn
+        expr: sum(rate(nexaflow_api_request_errors_total[5m])) / clamp_min(sum(rate(nexaflow_api_request_duration_seconds_count[5m])), 1) > 0.0144
+        for: 10m
+        labels: {severity: page}
+        annotations:
+          summary: NexaFlow API is rapidly consuming its 99.9% availability budget
+      - alert: NexaFlowAPILatency
+        expr: histogram_quantile(0.99, sum by (le) (rate(nexaflow_api_request_duration_seconds_bucket[10m]))) > 2
+        for: 15m
+        labels: {severity: page}
+        annotations:
+          summary: NexaFlow API p99 latency is above two seconds
+      - alert: NexaFlowDatabasePoolSaturation
+        expr: nexaflow_database_connections_in_use / clamp_min(nexaflow_database_connections_open, 1) > 0.8
+        for: 15m
+        labels: {severity: ticket}
+        annotations:
+          summary: NexaFlow database connection pool is saturated
+      - alert: NexaFlowJobDLQ
+        expr: nexaflow_jobs_dlq_depth > 0
+        for: 5m
+        labels: {severity: page}
+        annotations:
+          summary: NexaFlow durable-job DLQ contains jobs
+      - alert: NexaFlowJobBacklog
+        expr: nexaflow_jobs_depth > 1000
+        for: 10m
+        labels: {severity: ticket}
+        annotations:
+          summary: NexaFlow durable-job backlog is growing

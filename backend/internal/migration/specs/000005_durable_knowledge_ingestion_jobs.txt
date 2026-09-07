@@ -1,0 +1,5 @@
+version=5
+name=durable_knowledge_ingestion_jobs
+contract=Create durable knowledge ingestion jobs and their worker claim index.
+risk=Adds a worker-visible queue table and index.
+rollback=Stop workers first; retain queued jobs for replay.

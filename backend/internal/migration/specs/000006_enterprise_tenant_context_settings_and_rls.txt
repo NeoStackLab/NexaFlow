@@ -1,0 +1,5 @@
+version=6
+name=enterprise_tenant_context_settings_and_rls
+contract=Converge legacy tenants and permissions, seed billing plans, add tenant settings and lifecycle fields, grant tenant permissions, and force tenant RLS policies on every tenant-owned table.
+risk=Requires a NOSUPERUSER NOBYPASSRLS application owner. Forced RLS changes all tenant-table read and write behavior.
+rollback=Restore the pre-migration backup or explicitly disable policies under an approved incident procedure; automatic policy removal is unsafe.

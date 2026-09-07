@@ -1,0 +1,11 @@
+[Unit]
+Description=Run NexaFlow restore drill weekly
+
+[Timer]
+OnCalendar=Sat *-*-* 03:43:00 UTC
+RandomizedDelaySec=30m
+Persistent=true
+Unit=nexaflow-restore-drill.service
+
+[Install]
+WantedBy=timers.target

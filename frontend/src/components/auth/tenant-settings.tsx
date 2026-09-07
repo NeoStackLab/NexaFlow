@@ -1,0 +1,22 @@
+"use client";
+
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ArrowLeft, Building2, LoaderCircle, MonitorSmartphone, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { createTenant, getSessions, revokeSession, switchTenant } from "@/lib/auth/api";
+import { useAuthStore } from "@/lib/auth/store";
+import { useBilingual, useLanguage } from "@/lib/i18n";
+
+export function TenantSettings() {
+  const t = useBilingual();
+  const { language } = useLanguage();
+  const locale = language === "ja" ? "ja-JP" : language === "zh-CN" ? "zh-CN" : "en-US";
+  const router = useRouter(); const queryClient = useQueryClient(); const user = useAuthStore((state) => state.user); const [name, setName] = useState(""); const [slug, setSlug] = useState("");
+  const sessions = useQuery({ queryKey: ["tenant-sessions"], queryFn: getSessions, enabled: Boolean(user) });
+  const createMutation = useMutation({ mutationFn: () => createTenant(name, slug), onSuccess: async (tenant) => { await switchTenant(tenant.id); await queryClient.invalidateQueries(); router.replace("/admin"); } });
+  const revokeMutation = useMutation({ mutationFn: revokeSession, onSuccess: () => queryClient.invalidateQueries({ queryKey: ["tenant-sessions"] }) });
+  if (!user) return <main className="grid min-h-screen place-items-center bg-ink font-mono text-xs text-white/40">{t("需要认证", "AUTHENTICATION REQUIRED")}</main>;
+  return <main className="min-h-screen bg-canvas p-5 text-ink sm:p-10"><div className="mx-auto max-w-5xl"><Link className="inline-flex items-center gap-2 text-xs font-bold" href="/admin"><ArrowLeft className="size-4" />{t("返回后台", "Back to admin")}</Link><header className="mt-10 border-b border-ink/15 pb-6"><p className="install-kicker">TENANT SETTINGS / {t("企业空间", "WORKSPACE")}</p><h1 className="mt-3 text-4xl font-black tracking-[-.055em] sm:text-6xl">{t("空间与会话", "Workspace & sessions")}</h1></header><div className="mt-8 grid gap-6 lg:grid-cols-2"><section className="install-fieldset"><div className="flex items-center gap-3"><Building2 className="size-5" /><h2 className="text-lg font-black">{t("创建企业空间", "Create workspace")}</h2></div><p className="mt-3 text-xs leading-6 text-ink-muted">{t("创建者将成为新空间的超级管理员。创建完成后会安全轮换刷新会话并切换到新租户。", "The creator becomes the new workspace super administrator. NexaFlow rotates the refresh session and switches tenant after creation.")}</p><div className="mt-5 grid gap-4"><label className="install-field"><span>{t("空间名称", "Workspace name")}</span><input value={name} onChange={(event) => setName(event.target.value)} /></label><label className="install-field"><span>{t("唯一标识", "Unique slug")}</span><input placeholder="example-company" value={slug} onChange={(event) => setSlug(event.target.value.toLowerCase())} /></label></div><button className="install-button-primary mt-5" disabled={name.length < 2 || slug.length < 3 || createMutation.isPending} onClick={() => createMutation.mutate()}>{createMutation.isPending ? <LoaderCircle className="size-4 animate-spin" /> : <Building2 className="size-4" />}{t("创建并切换", "Create and switch")}</button></section><section className="install-fieldset"><div className="flex items-center gap-3"><MonitorSmartphone className="size-5" /><h2 className="text-lg font-black">{t("当前空间会话", "Current workspace sessions")}</h2></div><p className="mt-3 text-xs leading-6 text-ink-muted">{t("仅显示当前企业空间的活跃会话。撤销操作同时校验用户与租户所有权。", "Only active sessions in the current workspace are shown. Revocation validates both user and tenant ownership.")}</p><div className="mt-5 space-y-2">{sessions.isLoading && <LoaderCircle className="size-4 animate-spin" />}{sessions.data?.map((session) => <div className="flex items-center gap-3 border border-ink/10 p-3" key={session.id}><div className="min-w-0 flex-1"><p className="truncate text-xs font-bold">{session.user_agent || t("未知客户端", "Unknown client")}</p><p className="mt-1 font-mono text-[9px] text-ink-muted">{session.ip_address} · {new Date(session.created_at).toLocaleString(locale)}</p></div><button className="p-2 text-red-800" aria-label={t("撤销会话", "Revoke session")} onClick={() => revokeMutation.mutate(session.id)}><Trash2 className="size-4" /></button></div>)}</div></section></div></div></main>;
+}

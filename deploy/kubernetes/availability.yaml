@@ -1,0 +1,53 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: nexaflow-backend
+spec:
+  maxUnavailable: 1
+  unhealthyPodEvictionPolicy: AlwaysAllow
+  selector:
+    matchLabels: {app.kubernetes.io/name: nexaflow-backend}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: nexaflow-frontend
+spec:
+  maxUnavailable: 1
+  unhealthyPodEvictionPolicy: AlwaysAllow
+  selector:
+    matchLabels: {app.kubernetes.io/name: nexaflow-frontend}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: nexaflow-backend
+spec:
+  scaleTargetRef: {apiVersion: apps/v1, kind: Deployment, name: nexaflow-backend}
+  minReplicas: 2
+  maxReplicas: 10
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target: {type: Utilization, averageUtilization: 70}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: nexaflow-frontend
+spec:
+  scaleTargetRef: {apiVersion: apps/v1, kind: Deployment, name: nexaflow-frontend}
+  minReplicas: 2
+  maxReplicas: 6
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target: {type: Utilization, averageUtilization: 70}

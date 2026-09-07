@@ -1,0 +1,17 @@
+"use client";
+
+import { useQuery } from "@tanstack/react-query";
+import { ArrowLeft, FileClock, LoaderCircle } from "lucide-react";
+import Link from "next/link";
+import { listAuditEvents } from "@/lib/audit/api";
+import { getAPIError } from "@/lib/install/api";
+import { useBilingual, useLanguage } from "@/lib/i18n";
+
+export function AuditLog() {
+  const t = useBilingual();
+  const { language } = useLanguage();
+  const events = useQuery({ queryKey: ["audit-events"], queryFn: () => listAuditEvents(100), refetchInterval: 30_000 });
+  const locale = language === "ja" ? "ja-JP" : language === "zh-CN" ? "zh-CN" : "en-US";
+
+  return <main className="min-h-screen bg-canvas p-5 text-ink sm:p-10"><div className="mx-auto max-w-[1500px]"><Link className="inline-flex items-center gap-2 text-xs font-bold" href="/admin"><ArrowLeft className="size-4" />{t("返回后台", "Back to admin")}</Link><header className="mt-10 flex items-end justify-between gap-5 border-b border-ink/15 pb-6"><div><p className="install-kicker">SECURITY / {t("审计日志", "AUDIT LOG")}</p><h1 className="mt-3 text-4xl font-black tracking-[-.055em] sm:text-6xl">{t("HTTP 请求审计", "HTTP request audit")}</h1><p className="mt-4 max-w-3xl text-sm leading-7 text-ink-muted">{t("记录当前企业中已认证的写入请求，不保存请求体或业务敏感字段。", "Authenticated write requests for this workspace are retained without request bodies or business-sensitive fields.")}</p></div><FileClock className="hidden size-12 text-ink-muted sm:block" /></header>{events.error && <div className="mt-6 border-l-2 border-red-800 bg-red-50 p-4 text-xs text-red-900">{getAPIError(events.error)}</div>}<section className="mt-8 overflow-hidden border border-ink/15 bg-white/35"><div className="flex items-center justify-between border-b border-ink/15 p-5"><div><p className="text-sm font-black">{t("最近事件", "Recent events")}</p><p className="mt-1 font-mono text-[9px] text-ink-muted">TENANT-SCOPED · {events.data?.length ?? 0} EVENTS</p></div>{events.isLoading && <LoaderCircle className="size-4 animate-spin" />}</div><div className="overflow-x-auto"><table className="w-full min-w-[900px] text-left text-xs"><thead className="border-b border-ink/15 font-mono text-[9px] text-ink-muted"><tr><th className="p-4">{t("时间", "Time")}</th><th className="p-4">{t("执行者", "Actor")}</th><th className="p-4">{t("请求", "Request")}</th><th className="p-4">{t("资源", "Resource")}</th><th className="p-4">{t("状态", "Status")}</th><th className="p-4">{t("请求 ID", "Request ID")}</th></tr></thead><tbody>{events.data?.map((event) => <tr className="border-b border-ink/10 last:border-0" key={event.id}><td className="whitespace-nowrap p-4 text-ink-muted">{new Date(event.created_at).toLocaleString(locale)}</td><td className="max-w-[150px] truncate p-4 font-mono text-[10px]" title={event.actor_id}>{event.actor_id}</td><td className="p-4"><span className="mr-2 inline-block border border-ink/20 px-1.5 py-0.5 font-mono text-[9px] font-bold">{event.method}</span><span className="font-mono text-[10px]">{event.path}</span></td><td className="p-4 font-mono text-[10px]">{event.resource}</td><td className={`p-4 font-mono text-[10px] font-bold ${event.status_code >= 400 ? "text-red-800" : "text-emerald-800"}`}>{event.status_code}</td><td className="max-w-[180px] truncate p-4 font-mono text-[10px] text-ink-muted" title={event.request_id}>{event.request_id}</td></tr>)}{events.data?.length === 0 && <tr><td colSpan={6} className="p-12 text-center text-xs text-ink-muted">{t("暂无审计事件", "No audit events yet")}</td></tr>}</tbody></table></div></section></div></main>;
+}

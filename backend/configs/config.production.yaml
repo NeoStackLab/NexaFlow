@@ -1,0 +1,107 @@
+app:
+  name: NexaFlow API
+  env: production
+
+install:
+  data_dir: /app/data
+  mode: manual
+
+auth:
+  jwt_secret: ""
+  access_token_ttl: 15m
+  refresh_token_ttl: 168h
+  issuer: nexaflow
+
+server:
+  host: 0.0.0.0
+  port: 8080
+  read_timeout: 10s
+  write_timeout: 15s
+  idle_timeout: 60s
+  shutdown_timeout: 30s
+
+database:
+  host: postgres
+  port: 5432
+  user: nexaflow_app
+  password: ""
+  name: nexaflow
+  sslmode: disable
+  max_open_connections: 25
+  max_idle_connections: 5
+  connection_max_lifetime: 30m
+
+redis:
+  host: redis
+  port: 6379
+  password: ""
+  database: 0
+  dial_timeout: 5s
+  read_timeout: 3s
+  write_timeout: 3s
+
+cors:
+  allowed_origins:
+    - https://example.invalid
+
+log:
+  level: info
+  format: json
+
+ai:
+  base_url: https://api.openai.com/v1
+  api_key: ""
+  chat_model: gpt-5-mini
+  embedding_model: text-embedding-3-small
+  timeout: 60s
+  input_cost_per_million_tokens: 0
+  output_cost_per_million_tokens: 0
+
+observability:
+  enabled: true
+  endpoint: otel-collector:4318
+  insecure: false
+  sample_ratio: 1.0
+  metric_interval: 15s
+
+jobs:
+  namespace: nexaflow
+  concurrency: 4
+  poll_interval: 250ms
+  lease_timeout: 2m
+  retry_base: 5s
+  retry_max: 15m
+  idempotency_ttl: 24h
+
+knowledge:
+  worker_interval: 5s
+  batch_size: 5
+  max_attempts: 3
+
+billing:
+  stripe_secret_key: ""
+  stripe_webhook_secret: ""
+  stripe_pro_price_id: ""
+  stripe_enterprise_price_id: ""
+  success_url: https://example.invalid/admin/billing?checkout=success
+  cancel_url: https://example.invalid/admin/billing?checkout=cancel
+
+storage:
+  provider: s3
+  local_path: /app/data/uploads
+  endpoint: https://example.invalid
+  region: us-east-1
+  bucket: nexaflow
+  access_key_id: ""
+  secret_access_key: ""
+
+notifications:
+  smtp_host: ""
+  smtp_port: 587
+  smtp_username: ""
+  smtp_password: ""
+  smtp_from: ""
+  webhook_allowlist: []
+  worker_interval: 10s
+  batch_size: 25
+  max_attempts: 8

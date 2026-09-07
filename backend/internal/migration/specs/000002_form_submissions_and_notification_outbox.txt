@@ -1,0 +1,5 @@
+version=2
+name=form_submissions_and_notification_outbox
+contract=Ensure form submissions and notification outbox columns and indexes exist.
+risk=Online additive schema reconciliation through GORM AutoMigrate.
+rollback=Leave additive columns in place and roll back application code.

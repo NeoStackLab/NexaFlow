@@ -1,0 +1,12 @@
+[Unit]
+Description=NexaFlow encrypted PostgreSQL backup
+Requires=docker.service
+After=docker.service network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/nexaflow
+ExecStart=/usr/bin/docker compose --env-file .env.production.local -f docker/compose.production.yaml --profile operations run --rm backup create
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7

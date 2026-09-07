@@ -1,0 +1,15 @@
+{
+  "title": "NexaFlow Runtime",
+  "uid": "nexaflow-runtime",
+  "schemaVersion": 39,
+  "refresh": "30s",
+  "time": {"from": "now-6h", "to": "now"},
+  "panels": [
+    {"id": 1, "type": "timeseries", "title": "API request rate", "targets": [{"expr": "sum(rate(nexaflow_api_request_duration_seconds_count[5m]))"}], "gridPos": {"h": 8, "w": 8, "x": 0, "y": 0}},
+    {"id": 2, "type": "timeseries", "title": "API p95 / p99 latency", "targets": [{"expr": "histogram_quantile(0.95, sum by (le) (rate(nexaflow_api_request_duration_seconds_bucket[5m])))", "legendFormat": "p95"}, {"expr": "histogram_quantile(0.99, sum by (le) (rate(nexaflow_api_request_duration_seconds_bucket[5m])))", "legendFormat": "p99"}], "gridPos": {"h": 8, "w": 8, "x": 8, "y": 0}},
+    {"id": 3, "type": "timeseries", "title": "API 5xx rate", "targets": [{"expr": "sum(rate(nexaflow_api_request_errors_total[5m]))"}], "gridPos": {"h": 8, "w": 8, "x": 16, "y": 0}},
+    {"id": 4, "type": "timeseries", "title": "Database pool", "targets": [{"expr": "nexaflow_database_connections_open", "legendFormat": "open"}, {"expr": "nexaflow_database_connections_in_use", "legendFormat": "in use"}], "gridPos": {"h": 8, "w": 8, "x": 0, "y": 8}},
+    {"id": 5, "type": "timeseries", "title": "Job queue / DLQ", "targets": [{"expr": "nexaflow_jobs_depth", "legendFormat": "ready"}, {"expr": "nexaflow_jobs_dlq_depth", "legendFormat": "DLQ"}], "gridPos": {"h": 8, "w": 8, "x": 8, "y": 8}},
+    {"id": 6, "type": "timeseries", "title": "AI tokens / estimated cost", "targets": [{"expr": "sum(rate(nexaflow_ai_tokens_total[5m])) by (ai_token_type)", "legendFormat": "{{ai_token_type}} tokens/s"}, {"expr": "sum(rate(nexaflow_ai_cost_USD_total[5m]))", "legendFormat": "USD/s"}], "gridPos": {"h": 8, "w": 8, "x": 16, "y": 8}}
+  ]
+}

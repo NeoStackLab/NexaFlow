@@ -1,0 +1,17 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: nexaflow
+resources:
+  - namespace.yaml
+  - service-account.yaml
+  - configmap.yaml
+  - backend.yaml
+  - frontend.yaml
+  - ingress.yaml
+  - availability.yaml
+  - network-policies.yaml
+  - backup-cronjobs.yaml
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: nexaflow
+    includeSelectors: true

@@ -1,0 +1,5 @@
+version=3
+name=user_lifecycle_status_management
+contract=Create user.delete permission and grant it to active tenant admin and super_admin roles.
+risk=Permission vocabulary and default grants change for existing active tenants.
+rollback=Revoke the permission explicitly; never delete audit evidence automatically.

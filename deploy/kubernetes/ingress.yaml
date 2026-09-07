@@ -1,0 +1,30 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: nexaflow
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: 25m
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "5"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts: [nexaflow.example.com]
+      secretName: nexaflow-tls
+  rules:
+    - host: nexaflow.example.com
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service: {name: nexaflow-backend, port: {name: http}}
+          - path: /health
+            pathType: Prefix
+            backend:
+              service: {name: nexaflow-backend, port: {name: http}}
+          - path: /
+            pathType: Prefix
+            backend:
+              service: {name: nexaflow-frontend, port: {name: http}}

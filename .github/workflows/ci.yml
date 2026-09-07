@@ -1,0 +1,122 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:0.8.6-pg18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+      redis:
+        image: redis:8.8.1-alpine3.23
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 12
+      localstack:
+        image: localstack/localstack:2026.07.4
+        env:
+          SERVICES: s3
+        ports:
+          - 4566:4566
+        options: >-
+          --health-cmd "curl -fsS http://localhost:4566/_localstack/health"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      NEXAFLOW_TEST_ADMIN_DSN: postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable
+      NEXAFLOW_TEST_REDIS_ADDR: localhost:6379
+      NEXAFLOW_TEST_S3_ENDPOINT: http://localhost:4566
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version: "1.26.5"
+          cache-dependency-path: backend/go.sum
+      - run: go test ./...
+      - run: go test -tags=integration ./internal/migration ./internal/integration -count=1
+      - run: go test -race ./...
+      - run: go vet ./...
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - run: corepack enable
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm build
+
+  compose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: cp .env.example .env
+      - run: sed -i 's/^JWT_SECRET=.*/JWT_SECRET=ci-only-secret-that-is-at-least-32-chars/' .env
+      - run: docker compose --env-file .env -f docker/compose.yaml config --quiet
+
+  browser-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - run: pip install playwright==1.55.0
+      - run: python -m playwright install --with-deps chromium
+      - run: cp .env.example .env
+      - run: sed -i 's/^JWT_SECRET=.*/JWT_SECRET=ci-only-secret-that-is-at-least-32-chars/' .env
+      - run: docker compose --env-file .env -f docker/compose.yaml up --build --detach --wait
+      - run: python tests/browser/smoke.py
+        env:
+          NEXAFLOW_WEB_URL: http://127.0.0.1:3000
+          NEXAFLOW_BROWSER_ARTIFACTS: artifacts
+      - if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: browser-smoke-diagnostics
+          path: artifacts
+          if-no-files-found: ignore
+      - if: always()
+        run: docker compose --env-file .env -f docker/compose.yaml logs --no-color > compose-smoke.log
+      - if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: compose-smoke-log
+          path: compose-smoke.log
+      - if: always()
+        run: docker compose --env-file .env -f docker/compose.yaml down --volumes
